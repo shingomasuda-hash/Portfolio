@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { loadGallery, placeholderTexture, type Palette } from "../../lib/screens";
+import { outputTypeLabel } from "../../data/glossary";
 import { textTexture } from "../../lib/textures";
 import { stage } from "../../state/experience";
 import type { PortfolioProject } from "../../data/portfolioProjects";
@@ -19,7 +20,14 @@ export function useGalleryTextures(project: PortfolioProject, palette: Palette) 
   const fallbacks = useMemo(
     () =>
       project.gallery.map((_, i) =>
-        placeholderTexture(i, project.outputs[i]?.label ?? project.category, project.title, palette),
+        placeholderTexture(
+          i,
+          project.outputs[i]?.label ?? project.category,
+          project.title,
+          palette,
+          1,
+          outputTypeLabel[project.outputs[i]?.type ?? ""] ?? "",
+        ),
       ),
     [project, palette],
   );
@@ -136,7 +144,7 @@ function DesktopCarrier({ tex, palette, w = 0.5 }: { tex: THREE.Texture; palette
   );
 }
 
-function NotebookCarrier({ tex, w = 0.38 }: { tex: THREE.Texture; w?: number }) {
+function NotebookCarrier({ tex, w = 0.46 }: { tex: THREE.Texture; w?: number }) {
   const d = w * 0.68;
   const map = useCover(tex, w / (d * 0.62));
   return (
@@ -149,7 +157,7 @@ function NotebookCarrier({ tex, w = 0.38 }: { tex: THREE.Texture; w?: number }) 
         <planeGeometry args={[w * 0.8, d * 0.46]} />
         <meshStandardMaterial color="#A2A39E" roughness={0.75} />
       </mesh>
-      <group position={[0, 0.016, -d / 2]} rotation={[-1.88, 0, 0]}>
+      <group position={[0, 0.016, -d / 2]} rotation={[-1.66, 0, 0]}>
         <mesh position={[0, d * 0.33, 0]} castShadow>
           <boxGeometry args={[w, d * 0.66, 0.008]} />
           <meshStandardMaterial color="#D9D9D4" roughness={0.32} metalness={0.55} />

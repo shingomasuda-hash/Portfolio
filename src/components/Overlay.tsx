@@ -1,11 +1,12 @@
 import { useEffect } from "react";
 import { portfolioProjects, type PortfolioProject } from "../data/portfolioProjects";
+import { approachGloss, categoryLabel, outputTypeLabel } from "../data/glossary";
 import { SCENE_COUNT, SCENE_LABELS, useExperience } from "../state/experience";
 
 const num = (n: number) => String(n + 1).padStart(2, "0");
 
 /* ------------------------------------------------------------------ */
-/*  Per-scene copy — short on screen, everything else in CASE STUDY    */
+/*  Per-scene copy — short on screen, the rest in CASE STUDY           */
 /* ------------------------------------------------------------------ */
 
 function sceneCopy(p: PortfolioProject, scene: number) {
@@ -15,12 +16,103 @@ function sceneCopy(p: PortfolioProject, scene: number) {
     case 1:
       return { head: p.story.challengeCopy, body: p.challenge };
     case 2:
-      return { head: p.story.approachCopy, body: p.description };
+      return { head: p.story.approachCopy, body: "" };
     case 3:
       return { head: p.story.outputCopy, body: "" };
     default:
       return { head: p.story.resultCopy, body: "" };
   }
+}
+
+/**
+ * The block under the headline. This is where "what did they actually do"
+ * gets answered — scope, the work itself, and what changed.
+ */
+function SceneDetail({ p, scene }: { p: PortfolioProject; scene: number }) {
+  if (scene === 0) {
+    return (
+      <div className="block">
+        <h4>
+          担当領域<em>SCOPE</em>
+        </h4>
+        <ul className="scope">
+          {p.approach.map((a) => (
+            <li key={a}>{a}</li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  if (scene === 1) {
+    return (
+      <div className="block">
+        <h4>
+          課題<em>CHALLENGE</em>
+        </h4>
+        <p className="lede">{p.challenge}</p>
+      </div>
+    );
+  }
+
+  if (scene === 2) {
+    return (
+      <div className="block">
+        <h4>
+          やったこと<em>WHAT WE DID</em>
+        </h4>
+        <ol className="did">
+          {p.approach.map((a, i) => (
+            <li key={a}>
+              <i>{num(i)}</i>
+              <b>{a}</b>
+              <span>{approachGloss[a] ?? ""}</span>
+            </li>
+          ))}
+        </ol>
+      </div>
+    );
+  }
+
+  if (scene === 3) {
+    return (
+      <div className="block">
+        <h4>
+          つくったもの<em>OUTPUT</em>
+        </h4>
+        <ul className="made">
+          {p.outputs.map((o) => (
+            <li key={o.label}>
+              <b>
+                {o.label}
+                <i>{outputTypeLabel[o.type] ?? o.type}</i>
+              </b>
+              <span>{o.description}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
+
+  return (
+    <div className="block">
+      <h4>
+        変わったこと<em>RESULT</em>
+      </h4>
+      <ul className="got">
+        {p.results.map((r) => (
+          <li key={r.label}>
+            <b>
+              {r.value && <em>{r.value}</em>}
+              {r.label}
+            </b>
+            {r.description && <span>{r.description}</span>}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -39,6 +131,7 @@ export function Overlay() {
     next,
     prev,
     goScene,
+    setHovered,
     setCaseOpen,
     setInfoOpen,
   } = useExperience();
@@ -49,7 +142,6 @@ export function Overlay() {
   const busy = phase !== "idle";
   const copy = sceneCopy(project, scene);
 
-  /* keyboard + wheel paging */
   useEffect(() => {
     let lock = 0;
     const key = (e: KeyboardEvent) => {
@@ -88,20 +180,12 @@ export function Overlay() {
 
   return (
     <>
-      <div className="ui">
+      {!reading && <div className="uiRight" />}
+      <div className="ui" data-mode={mode}>
         <header className="top">
           <div className="mark">
             <b>ANYWARE ARCHIVE</b>
             <span>事業を編集する。</span>
-            {reading && (
-              <div className="projectTag">
-                <b>{project.title}</b>
-                <span>
-                  {project.clientLabel} — {project.industry}
-                </span>
-                <span>{project.year}</span>
-              </div>
-            )}
           </div>
           <div className="topRight">
             {reading && (
@@ -120,48 +204,23 @@ export function Overlay() {
           </div>
         </header>
 
-        <div />
-
         {reading ? (
-          <div className="read">
-            <div className="caption" key={`${project.id}-${scene}`}>
+          <>
+            <div className="col" key={`${project.id}-${scene}`}>
+              <div className="colHead">
+                <b>{project.title}</b>
+                <span>{project.titleJa}</span>
+                <span className="fine">
+                  {project.clientLabel} · {project.year}
+                </span>
+              </div>
               <div className="eyebrow">
                 <s />
                 SCENE {num(scene)} — {SCENE_LABELS[scene]}
               </div>
               <h2>{copy.head}</h2>
               {copy.body && <p>{copy.body}</p>}
-
-              {scene === 2 && (
-                <div className="tags">
-                  {project.approach.map((a) => (
-                    <span className="tag" key={a}>
-                      {a}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {scene === 3 && (
-                <div className="tags">
-                  {project.outputs.map((o) => (
-                    <span className="tag" key={o.label}>
-                      {o.label}
-                    </span>
-                  ))}
-                </div>
-              )}
-
-              {scene === 4 && (
-                <div className="figures">
-                  {project.results.map((r) => (
-                    <div className="figure" data-quiet={!r.value} key={r.label}>
-                      {r.value && <b>{r.value}</b>}
-                      <span>{r.label}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              <SceneDetail p={project} scene={scene} />
             </div>
 
             <div className="controls">
@@ -193,46 +252,74 @@ export function Overlay() {
                 </button>
               </div>
             </div>
-          </div>
+          </>
         ) : (
-          <div className="shelfFoot">
-            <div className="shelfLead">
-              <div className="eyebrow">10 VOLUMES — 2025 / 2026</div>
+          <>
+            <div className="col shelfCol">
+              <div className="eyebrow">
+                <s />
+                10 VOLUMES — 2025 / 2026
+              </div>
               <h1>
                 本を開くと、
                 <br />
-                その業種が立ち上がる。
+                その業種が
+                <br />
+                立ち上がる。
               </h1>
               <p>
                 ブランド、店舗、商品、採用、Web、SNS、AI。
                 領域ごとの制作物ではなく、事業そのものを編集した記録です。
               </p>
+              <div className="fields">
+                {["BRAND", "STORE", "RECRUIT", "LOCAL", "WEB", "SNS", "AI", "BUSINESS"].map((f) => (
+                  <span key={f}>{f}</span>
+                ))}
+              </div>
             </div>
-            <div className="hint">
-              <i />
-              背表紙を選ぶ
+
+            <nav className="index" aria-label="Volumes">
+              <h4>
+                目次<em>INDEX</em>
+              </h4>
+              <ol>
+                {portfolioProjects.map((p, i) => (
+                  <li key={p.id}>
+                    <button
+                      data-on={hovered === i}
+                      onMouseEnter={() => setHovered(i)}
+                      onMouseLeave={() => setHovered(null)}
+                      onFocus={() => setHovered(i)}
+                      onBlur={() => setHovered(null)}
+                      onClick={() => openBook(i)}
+                    >
+                      <i>{num(i)}</i>
+                      <b>{p.title}</b>
+                      <span>{categoryLabel[p.category] ?? p.category}</span>
+                      {p.featured && <u aria-label="featured" />}
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            </nav>
+
+            <div className="foot">
+              <div className="volume" data-on={hovered !== null}>
+                <span className="eyebrow">{preview.cover.eyebrow}</span>
+                <b>{preview.titleJa}</b>
+                <span>
+                  {preview.industry} — {preview.clientLabel}
+                </span>
+                <span className="fine">{preview.theme.material}</span>
+              </div>
+              <div className="hint">
+                <i />
+                背表紙を選ぶ
+              </div>
             </div>
-          </div>
+          </>
         )}
       </div>
-
-      {!reading && (
-        <div className="volume" data-on={hovered !== null}>
-          <div className="eyebrow">{preview.cover.eyebrow}</div>
-          <h3>{preview.title}</h3>
-          <h4>{preview.titleJa}</h4>
-          <dl>
-            <dt>Field</dt>
-            <dd>{preview.industry}</dd>
-            <dt>Client</dt>
-            <dd>{preview.clientLabel}</dd>
-            <dt>Year</dt>
-            <dd>{preview.year}</dd>
-            <dt>Material</dt>
-            <dd>{preview.theme.material}</dd>
-          </dl>
-        </div>
-      )}
 
       <CaseStudy project={project} open={caseOpen} onClose={() => setCaseOpen(false)} />
       <Info open={infoOpen} onClose={() => setInfoOpen(false)} onPick={openBook} />
@@ -280,24 +367,27 @@ function CaseStudy({
 
       <section>
         <h4>What we did</h4>
-        <div className="tags">
-          {project.approach.map((a) => (
-            <span className="tag" key={a}>
-              {a}
-            </span>
+        <ol className="did">
+          {project.approach.map((a, i) => (
+            <li key={a}>
+              <i>{num(i)}</i>
+              <b>{a}</b>
+              <span>{approachGloss[a] ?? ""}</span>
+            </li>
           ))}
-        </div>
+        </ol>
       </section>
 
       <section>
         <h4>Output</h4>
-        <ul>
+        <ul className="made">
           {project.outputs.map((o) => (
             <li key={o.label}>
               <b>
-                {o.label} — {o.type}
+                {o.label}
+                <i>{outputTypeLabel[o.type] ?? o.type}</i>
               </b>
-              <p>{o.description}</p>
+              <span>{o.description}</span>
             </li>
           ))}
         </ul>
@@ -305,14 +395,14 @@ function CaseStudy({
 
       <section>
         <h4>Result</h4>
-        <ul>
+        <ul className="got">
           {project.results.map((r) => (
             <li key={r.label}>
               <b>
-                {r.value ? `${r.value} — ` : ""}
+                {r.value && <em>{r.value}</em>}
                 {r.label}
               </b>
-              {r.description && <p>{r.description}</p>}
+              {r.description && <span>{r.description}</span>}
             </li>
           ))}
         </ul>
@@ -324,11 +414,9 @@ function CaseStudy({
           {project.clientLabel} / {project.industry} / {project.year}
         </p>
         <div className="rule" />
-        <div className="tags">
+        <div className="fields">
           {project.tags.map((t) => (
-            <span className="tag" key={t}>
-              {t}
-            </span>
+            <span key={t}>{t}</span>
           ))}
         </div>
       </section>
@@ -366,69 +454,66 @@ function Info({
 
       <section>
         <h4>Fields</h4>
-        <ul>
+        <ul className="made">
           <li>
             <b>Brand &amp; Store</b>
-            <p>コンセプト設計、店舗体験、商品・メニュー開発、ショップツール。</p>
+            <span>コンセプト設計、店舗体験、商品・メニュー開発、ショップツール。</span>
           </li>
           <li>
             <b>Recruit</b>
-            <p>採用戦略、採用LP、社員インタビュー、動画、SNS、広告運用。</p>
+            <span>採用戦略、採用LP、社員インタビュー、動画、SNS、広告運用。</span>
           </li>
           <li>
             <b>Local</b>
-            <p>地域資源のリサーチ、ブランディング、イベント、体験設計。</p>
+            <span>地域資源のリサーチ、ブランディング、イベント、体験設計。</span>
           </li>
           <li>
             <b>Digital &amp; AI</b>
-            <p>Web・LP、UX設計、開発、業務フロー分析、生成AIの実装と自動化。</p>
+            <span>Web・LP、UX設計、開発、業務フロー分析、生成AIの実装と自動化。</span>
           </li>
         </ul>
       </section>
 
       <section>
         <h4>How to read</h4>
-        <ul>
+        <ul className="made">
           <li>
             <b>Shelf</b>
-            <p>背表紙をクリックすると、その本が棚から出て開きます。</p>
+            <span>背表紙か右の目次を選ぶと、その本が棚から出て開きます。</span>
           </li>
           <li>
             <b>Pages</b>
-            <p>
-              ← → キー、ホイール、画面右下のボタンでページを送ります。
-              1冊はINTRO / CHALLENGE / WHAT WE DID / OUTPUT / RESULTの5場面です。
-            </p>
+            <span>
+              ← → キー、ホイール、画面右下のボタンでページを送ります。1冊は INTRO /
+              CHALLENGE / WHAT WE DID / OUTPUT / RESULT の5場面です。
+            </span>
           </li>
           <li>
             <b>Case Study</b>
-            <p>詳細な背景・施策・成果は各本のCASE STUDYから読めます。</p>
+            <span>詳細な背景・施策・成果は各本の CASE STUDY から読めます。</span>
           </li>
         </ul>
       </section>
 
       <section>
         <h4>Volumes</h4>
-        <ul>
+        <div className="fields">
           {portfolioProjects.map((p, i) => (
-            <li key={p.id}>
-              <button
-                className="chip"
-                onClick={() => {
-                  onClose();
-                  if (mode === "shelf") onPick(i);
-                }}
-                disabled={mode !== "shelf"}
-              >
-                {String(i + 1).padStart(2, "0")} · {p.title}
-              </button>
-            </li>
+            <button
+              key={p.id}
+              className="chip"
+              onClick={() => {
+                onClose();
+                if (mode === "shelf") onPick(i);
+              }}
+              disabled={mode !== "shelf"}
+            >
+              {num(i)} · {p.title}
+            </button>
           ))}
-        </ul>
+        </div>
         {mode !== "shelf" && (
-          <p style={{ marginTop: 14, opacity: 0.6, fontSize: 12 }}>
-            棚に戻ると、他の本を開けます。
-          </p>
+          <p style={{ marginTop: 14, opacity: 0.6, fontSize: 12 }}>棚に戻ると、他の本を開けます。</p>
         )}
       </section>
 

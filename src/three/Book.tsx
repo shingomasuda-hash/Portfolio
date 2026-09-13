@@ -149,7 +149,7 @@ function Spine({
   return (
     <group>
       <mesh castShadow receiveShadow>
-        <boxGeometry args={[t * 0.8, closedThickness(design), HD * 1.94]} />
+        <boxGeometry args={[t * 0.8, closedThickness(design), HD * 2.0]} />
         <BoardMaterial design={design} which="spine" />
       </mesh>
       <mesh position={[-t * 0.41, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
@@ -175,12 +175,14 @@ export function Book({
   design,
   shelfPos,
   active,
+  hovered = false,
   children,
 }: {
   project: PortfolioProject;
   design: BookDesign;
   shelfPos: [number, number, number];
   active: boolean;
+  hovered?: boolean;
   children?: ReactNode;
 }) {
   const root = useRef<THREE.Group>(null);
@@ -195,6 +197,7 @@ export function Book({
   const leftPage = useRef<THREE.Mesh>(null);
   const rightPage = useRef<THREE.Mesh>(null);
 
+  const hover = useRef(0);
   const scl = useMemo(() => shelfScale(design), [design]);
   const edgeMap = useMemo(
     () => surfaceTexture("paper", design.edge, 11),
@@ -218,18 +221,20 @@ export function Book({
     if (!r.visible) return;
 
     const o = active ? stage.open : 0;
+    hover.current += ((hovered && o < 0.02 ? 1 : 0) - hover.current) * 0.1;
+    const hv = hover.current;
     const pull = easeOutCubic(range(o, 0, 0.26));
     const travel = easeInOutCubic(range(o, 0.16, 0.68));
     const opened = easeInOutCubic(range(o, 0.56, 1));
 
     r.position.set(
       lerp(shelfPos[0], lerp(HW / 2, 0, opened), travel),
-      lerp(shelfPos[1], 0, travel),
-      lerp(shelfPos[2] + pull * 0.75, 0, travel),
+      lerp(shelfPos[1] + hv * 0.04, 0, travel),
+      lerp(shelfPos[2] + pull * 0.75 + hv * 0.55, 0, travel),
     );
     r.rotation.set(
       lerp(-Math.PI / 2, 0, travel),
-      lerp(Math.PI / 2, 0, travel),
+      lerp(Math.PI / 2 - hv * 0.3, 0, travel),
       lerp(design.lean, 0, travel),
     );
     r.scale.set(
@@ -248,6 +253,8 @@ export function Book({
       const open = stackH + BOARD;
       spine.current.scale.y = lerp(1, open / closed, opened);
       spine.current.position.y = lerp(-stackH / 2, -open / 2 - 0.003, opened);
+      /* and back, so its end face stops fighting the page block at the gutter */
+      spine.current.position.z = -0.04 * opened;
     }
 
     if (front.current) {
@@ -302,7 +309,7 @@ export function Book({
           castShadow
           receiveShadow
         >
-          <boxGeometry args={[HW * 1.03, BOARD, HD * 2.06]} />
+          <boxGeometry args={[HW * 1.03, BOARD, HD * 2.03]} />
           <BoardMaterial design={design} which="cover" />
         </mesh>
 
@@ -362,7 +369,7 @@ export function Book({
 
         <group ref={front}>
           <mesh position={[HW / 2, 0, 0]} castShadow receiveShadow>
-            <boxGeometry args={[HW * 1.03, BOARD, HD * 2.06]} />
+            <boxGeometry args={[HW * 1.03, BOARD, HD * 2.03]} />
             <BoardMaterial design={design} which="cover" />
           </mesh>
           {design.deboss && (

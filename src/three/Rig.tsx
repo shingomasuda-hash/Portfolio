@@ -11,6 +11,7 @@ import { useExperience } from "../state/experience";
 const pos = new THREE.Vector3();
 const tgt = new THREE.Vector3();
 const tmp = new THREE.Vector3();
+const right = new THREE.Vector3();
 
 /** The idle life of the camera — different for every kind of subject. */
 function applyMotion(shot: Shot, t: number, p: THREE.Vector3, q: THREE.Vector3) {
@@ -107,6 +108,8 @@ export function Rig() {
     const need = Math.min(2.5, Math.max(1, REF_ASPECT / aspect));
     const distK = Math.min(need, 1.7);
     const widen = need / distK;
+    /* how far the subject has to move right to clear the reading column */
+    const shift = size.width >= 1080 ? Math.min(0.38, (size.width - 1080) / 1900 + 0.24) : 0;
 
     const project = portfolioProjects[index];
     const plan = staging[project.id]?.shots;
@@ -122,12 +125,12 @@ export function Rig() {
 
     /* --- shelf framing --- */
     const slot = shelfSlots[hovered ?? index] ?? [0, 1, SHELF_Z];
-    const lookX = hovered !== null ? slot[0] * 0.55 : 0;
-    const shelfPos = tmp.set(lookX * 0.5, PLANK_Y + 1.02, SHELF_Z + 5.25);
+    const lookX = hovered !== null ? slot[0] * 0.3 : 0;
+    const shelfPos = tmp.set(lookX * 0.45, PLANK_Y + 0.98, SHELF_Z + 7.05 * Math.min(distK, 1.22));
     pos.copy(shelfPos);
-    tgt.set(lookX, PLANK_Y + 0.7, SHELF_Z);
-    pos.x += Math.sin(t * 0.14) * 0.12;
-    pos.y += Math.sin(t * 0.1) * 0.05;
+    tgt.set(lookX, PLANK_Y + 0.62, SHELF_Z);
+    pos.x += Math.sin(t * 0.14) * 0.1;
+    pos.y += Math.sin(t * 0.1) * 0.045;
 
     /* --- reading framing --- */
     const o = stage.open;
@@ -136,7 +139,8 @@ export function Rig() {
       const rp = new THREE.Vector3(
         ...shotPosition({
           ...shot,
-          dist: shot.dist * distK,
+          /* trucking sideways costs frame width, so back off to pay for it */
+          dist: shot.dist * distK * (1 + shift * 0.34),
           /* looking down a little harder puts the spread into a tall frame */
           el: Math.min(72, shot.el + (widen - 1) * 26),
         }),
@@ -164,6 +168,18 @@ export function Rig() {
       const mix = easeInOutCubic(range(o, 0.12, 0.92));
       pos.lerp(rp, mix);
       tgt.lerp(rt, mix);
+    }
+
+    /* the pointer leans the whole room a little */
+    pos.x += stage.parallaxX * 0.16;
+    pos.y -= stage.parallaxY * 0.09;
+
+    /* on a wide screen the copy owns the left column, so truck the camera
+       sideways — a parallel shift keeps the composition of the shot intact */
+    if (shift !== 0) {
+      right.set(camera.matrixWorld.elements[0], 0, camera.matrixWorld.elements[2]).normalize();
+      pos.addScaledVector(right, -shift);
+      tgt.addScaledVector(right, -shift);
     }
 
     const fov = THREE.MathUtils.lerp(36 * widen, shotFov, easeInOutCubic(range(o, 0.2, 0.95)));

@@ -10,7 +10,7 @@ import { DIORAMAS } from "./dioramas";
 import { Book } from "./Book";
 import { Lighting } from "./Lighting";
 import { Rig } from "./Rig";
-import { Shelf, ShelfPicker, shelfSlots } from "./Shelf";
+import { Parallax, Shelf, ShelfPicker, shelfSlots } from "./Shelf";
 
 const SHELF_BG = "#E3E0D7";
 
@@ -41,6 +41,7 @@ function World() {
   const index = useExperience((s) => s.index);
   const mode = useExperience((s) => s.mode);
   const scene = useExperience((s) => s.scene);
+  const hovered = useExperience((s) => s.hovered);
 
   const project = portfolioProjects[index];
   const palette = useMemo(() => paletteOf(project), [project]);
@@ -50,7 +51,12 @@ function World() {
   return (
     <>
       <Rig />
-      <Lighting key={project.id + (reading ? "-r" : "-s")} project={project} />
+      <Parallax />
+      <Lighting
+        key={project.id + (reading ? "-r" : "-s")}
+        project={project}
+        focus={reading ? "book" : "shelf"}
+      />
       <Backdrop color={reading ? project.theme.background : SHELF_BG} />
 
       <ShelfWorld>
@@ -65,6 +71,7 @@ function World() {
           design={staging[p.id].book}
           shelfPos={shelfSlots[i]}
           active={reading && i === index}
+          hovered={!reading && hovered === i}
         >
           {reading && i === index && Diorama ? (
             <SceneContext.Provider value={{ palette, project, scene }}>

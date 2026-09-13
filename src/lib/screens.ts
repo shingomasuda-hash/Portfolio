@@ -462,40 +462,68 @@ export function placeholderTexture(
   projectTitle: string,
   p: Palette,
   aspect = 1,
+  kind = "",
 ) {
-  const key = `ph:${projectTitle}:${label}:${index}:${p.accent}:${aspect}`;
+  const key = `ph:${projectTitle}:${label}:${kind}:${index}:${p.accent}:${aspect}`;
   const hit = cache.get(key);
   if (hit) return hit;
-  const W = 700;
+  const W = 760;
   const H = Math.round(W / aspect);
   const { c, ctx } = make(W, H);
-  ctx.fillStyle = p.surface;
+
+  /* Carriers crop this to their own shape, so everything that has to survive
+     lives in the middle: a tinted field edge to edge, type dead centre. */
+  const g = ctx.createLinearGradient(0, 0, W, H);
+  g.addColorStop(0, alpha(p.accent, 0.96));
+  g.addColorStop(1, alpha(p.secondary, 0.9));
+  ctx.fillStyle = g;
   ctx.fillRect(0, 0, W, H);
-  ctx.strokeStyle = alpha(p.ink, 0.22);
-  ctx.lineWidth = 2;
-  ctx.strokeRect(18, 18, W - 36, H - 36);
-  ctx.strokeStyle = alpha(p.ink, 0.08);
-  ctx.beginPath();
-  ctx.moveTo(18, 18);
-  ctx.lineTo(W - 18, H - 18);
-  ctx.moveTo(W - 18, 18);
-  ctx.lineTo(18, H - 18);
-  ctx.stroke();
-  ctx.fillStyle = p.surface;
-  const bw = Math.min(W, H) * 0.62;
-  ctx.fillRect(W / 2 - bw / 2, H / 2 - bw * 0.28, bw, bw * 0.56);
-  ctx.fillStyle = alpha(p.ink, 0.85);
+  for (let i = 0; i < 5; i++) {
+    ctx.fillStyle = alpha(i % 2 ? "#ffffff" : "#000000", 0.05 + hash(index * 7 + i) * 0.06);
+    ctx.beginPath();
+    ctx.ellipse(
+      hash(index + i * 3) * W,
+      hash(index + i * 5) * H,
+      W * (0.2 + hash(index + i) * 0.45),
+      H * (0.2 + hash(index + i * 9) * 0.45),
+      hash(index + i) * 3,
+      0,
+      7,
+    );
+    ctx.fill();
+  }
+
+  const cx = W / 2;
+  const cy = H / 2;
   ctx.textAlign = "center";
-  ctx.font = `600 ${Math.round(H * 0.17)}px ${MINCHO}`;
-  ctx.fillText(String(index + 1).padStart(2, "0"), W / 2, H / 2 + H * 0.03);
-  ctx.font = `600 ${Math.round(H * 0.036)}px ${SANS}`;
-  ctx.fillStyle = alpha(p.ink, 0.55);
-  const t = label.toUpperCase().split("").join(" ");
-  ctx.fillText(t, W / 2, H / 2 + H * 0.115);
-  ctx.font = `500 ${Math.round(H * 0.03)}px ${SANS}`;
-  ctx.fillStyle = alpha(p.accent, 0.8);
-  ctx.fillText("IMAGE  READY  —  DROP  FILE  HERE", W / 2, H - 44);
+
+  ctx.fillStyle = "rgba(255,255,255,0.62)";
+  ctx.font = `600 ${Math.round(H * 0.03)}px ${SANS}`;
+  ctx.fillText(String(index + 1).padStart(2, "0"), cx, cy - H * 0.115);
+
+  ctx.fillStyle = "#ffffff";
+  ctx.font = `600 ${Math.round(H * 0.082)}px ${MINCHO}`;
+  ctx.fillText(label, cx, cy + H * 0.01);
+
+  ctx.strokeStyle = "rgba(255,255,255,0.45)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(cx - W * 0.055, cy + H * 0.052);
+  ctx.lineTo(cx + W * 0.055, cy + H * 0.052);
+  ctx.stroke();
+
+  if (kind) {
+    ctx.fillStyle = "rgba(255,255,255,0.78)";
+    ctx.font = `500 ${Math.round(H * 0.031)}px ${SANS}`;
+    ctx.fillText(kind, cx, cy + H * 0.105);
+  }
   ctx.textAlign = "left";
+
+  for (let i = 0; i < 2600; i++) {
+    ctx.fillStyle = `rgba(0,0,0,${hash(index * 3 + i) * 0.03})`;
+    ctx.fillRect(hash(i * 5 + index) * W, hash(i * 9 + index) * H, 1.5, 1.5);
+  }
+
   return toTexture(c, key);
 }
 

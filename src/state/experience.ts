@@ -60,6 +60,9 @@ export const stage = {
   reduced: false,
   /** development only — lets a test harness run the choreography faster */
   timeScale: 1,
+  /** −1..1 pointer position, eased; the camera leans with it */
+  parallaxX: 0,
+  parallaxY: 0,
 };
 
 let phaseStart = 0;
