@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { portfolioProjects, type PortfolioProject } from "../data/portfolioProjects";
-import { approachGloss, categoryLabel, outputTypeLabel } from "../data/glossary";
+import { approachGloss, outputTypeLabel } from "../data/glossary";
+import { headlineFigure, outcomeOf } from "../data/outcomes";
 import { SCENE_COUNT, SCENE_LABELS, useExperience } from "../state/experience";
 
 const num = (n: number) => String(n + 1).padStart(2, "0");
@@ -29,10 +30,32 @@ function sceneCopy(p: PortfolioProject, scene: number) {
  * gets answered — scope, the work itself, and what changed.
  */
 function SceneDetail({ p, scene }: { p: PortfolioProject; scene: number }) {
+  const o = outcomeOf(p.id);
+
   if (scene === 0) {
     return (
       <div className="block">
         <h4>
+          どんな会社か<em>CLIENT</em>
+        </h4>
+        <dl className="facts">
+          <dt>業界</dt>
+          <dd>{o?.sector ?? p.industry}</dd>
+          {o?.area && (
+            <>
+              <dt>エリア</dt>
+              <dd>{o.area}</dd>
+            </>
+          )}
+          {o?.scale && (
+            <>
+              <dt>規模</dt>
+              <dd>{o.scale}</dd>
+            </>
+          )}
+        </dl>
+        {o?.profile && <p className="lede">{o.profile}</p>}
+        <h4 className="spaced">
           担当領域<em>SCOPE</em>
         </h4>
         <ul className="scope">
@@ -95,22 +118,45 @@ function SceneDetail({ p, scene }: { p: PortfolioProject; scene: number }) {
     );
   }
 
+  const figures = o?.figures ?? [];
+  const changes = p.results.filter((r) => !r.value);
+
   return (
     <div className="block">
-      <h4>
-        変わったこと<em>RESULT</em>
-      </h4>
-      <ul className="got">
-        {p.results.map((r) => (
-          <li key={r.label}>
-            <b>
-              {r.value && <em>{r.value}</em>}
-              {r.label}
-            </b>
-            {r.description && <span>{r.description}</span>}
-          </li>
-        ))}
-      </ul>
+      {figures.length > 0 && (
+        <>
+          <h4>
+            出た数字<em>FIGURES</em>
+          </h4>
+          <ul className="figs">
+            {figures.map((f) => (
+              <li key={f.label}>
+                <b>{f.value}</b>
+                <span>{f.label}</span>
+                {(f.period || f.basis) && (
+                  <i>{[f.period, f.basis].filter(Boolean).join(" / ")}</i>
+                )}
+                {f.note && <p>{f.note}</p>}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+      {changes.length > 0 && (
+        <>
+          <h4 className={figures.length > 0 ? "spaced" : undefined}>
+            変わったこと<em>CHANGE</em>
+          </h4>
+          <ul className="got">
+            {changes.map((r) => (
+              <li key={r.label}>
+                <b>{r.label}</b>
+                {r.description && <span>{r.description}</span>}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 }
@@ -126,6 +172,7 @@ export function Overlay() {
     hovered,
     caseOpen,
     infoOpen,
+    worksOpen,
     openBook,
     closeBook,
     next,
@@ -134,6 +181,7 @@ export function Overlay() {
     setHovered,
     setCaseOpen,
     setInfoOpen,
+    setWorksOpen,
   } = useExperience();
 
   const project = portfolioProjects[index];
@@ -146,12 +194,13 @@ export function Overlay() {
     let lock = 0;
     const key = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        if (worksOpen) return setWorksOpen(false);
         if (caseOpen) return setCaseOpen(false);
         if (infoOpen) return setInfoOpen(false);
         if (reading) closeBook();
         return;
       }
-      if (!reading || caseOpen || infoOpen) return;
+      if (!reading || caseOpen || infoOpen || worksOpen) return;
       if (e.key === "ArrowRight" || e.key === "ArrowDown" || e.key === " ") {
         e.preventDefault();
         next();
@@ -162,7 +211,7 @@ export function Overlay() {
       }
     };
     const wheel = (e: WheelEvent) => {
-      if (!reading || caseOpen || infoOpen) return;
+      if (!reading || caseOpen || infoOpen || worksOpen) return;
       const now = performance.now();
       if (now - lock < 900) return;
       if (Math.abs(e.deltaY) < 28) return;
@@ -176,7 +225,18 @@ export function Overlay() {
       window.removeEventListener("keydown", key);
       window.removeEventListener("wheel", wheel);
     };
-  }, [reading, caseOpen, infoOpen, next, prev, closeBook, setCaseOpen, setInfoOpen]);
+  }, [
+    reading,
+    caseOpen,
+    infoOpen,
+    worksOpen,
+    next,
+    prev,
+    closeBook,
+    setCaseOpen,
+    setInfoOpen,
+    setWorksOpen,
+  ]);
 
   return (
     <>
@@ -188,6 +248,9 @@ export function Overlay() {
             <span>事業を編集する。</span>
           </div>
           <div className="topRight">
+            <button className="chip" data-on={worksOpen} onClick={() => setWorksOpen(!worksOpen)}>
+              Works
+            </button>
             {reading && (
               <button className="chip" data-on={caseOpen} onClick={() => setCaseOpen(!caseOpen)}>
                 Case Study
@@ -211,7 +274,8 @@ export function Overlay() {
                 <b>{project.title}</b>
                 <span>{project.titleJa}</span>
                 <span className="fine">
-                  {project.clientLabel} · {project.year}
+                  {outcomeOf(project.id)?.sector ?? project.industry} · {project.clientLabel} ·{" "}
+                  {project.year}
                 </span>
               </div>
               <div className="eyebrow">
@@ -295,8 +359,15 @@ export function Overlay() {
                     >
                       <i>{num(i)}</i>
                       <b>{p.title}</b>
-                      <span>{categoryLabel[p.category] ?? p.category}</span>
-                      {p.featured && <u aria-label="featured" />}
+                      {headlineFigure(p.id) ? (
+                        <em>{headlineFigure(p.id)!.value}</em>
+                      ) : (
+                        p.featured && <u aria-label="featured" />
+                      )}
+                      <span>
+                        {outcomeOf(p.id)?.sector ?? p.category}
+                        {outcomeOf(p.id)?.area ? ` · ${outcomeOf(p.id)!.area}` : ""}
+                      </span>
                     </button>
                   </li>
                 ))}
@@ -321,14 +392,16 @@ export function Overlay() {
         )}
       </div>
 
+      <Works open={worksOpen} onClose={() => setWorksOpen(false)} onPick={openBook} />
       <CaseStudy project={project} open={caseOpen} onClose={() => setCaseOpen(false)} />
       <Info open={infoOpen} onClose={() => setInfoOpen(false)} onPick={openBook} />
       <div
         className="scrim"
-        data-on={caseOpen || infoOpen}
+        data-on={caseOpen || infoOpen || worksOpen}
         onClick={() => {
           setCaseOpen(false);
           setInfoOpen(false);
+          setWorksOpen(false);
         }}
       />
     </>
@@ -336,6 +409,103 @@ export function Overlay() {
 }
 
 /* ------------------------------------------------------------------ */
+
+/** The whole archive on one screen: industry, company, work, numbers. */
+function Works({
+  open,
+  onClose,
+  onPick,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onPick: (i: number) => void;
+}) {
+  const mode = useExperience((s) => s.mode);
+  return (
+    <aside className="sheet sheetWide" data-on={open} aria-hidden={!open}>
+      <button className="sheetClose" onClick={onClose}>
+        Close ✕
+      </button>
+      <div className="eyebrow">Works — 2025 / 2026</div>
+      <h2>実績一覧</h2>
+      <h3>どの業界の、どういった会社に、何をして、どう変わったか。</h3>
+
+      <div className="worksScroll">
+        <table className="works">
+          <thead>
+            <tr>
+              <th />
+              <th>業界</th>
+              <th>どういった会社か</th>
+              <th>つくったもの</th>
+              <th>成果</th>
+            </tr>
+          </thead>
+          <tbody>
+            {portfolioProjects.map((p, i) => {
+              const o = outcomeOf(p.id);
+              const figures = o?.figures ?? [];
+              const changes = p.results.filter((r) => !r.value);
+              return (
+                <tr
+                  key={p.id}
+                  onClick={() => {
+                    if (mode !== "shelf") return;
+                    onClose();
+                    onPick(i);
+                  }}
+                  data-clickable={mode === "shelf"}
+                >
+                  <td className="wNo">
+                    <i>{num(i)}</i>
+                    <b>{p.title}</b>
+                    <span>{p.titleJa}</span>
+                  </td>
+                  <td className="wSector">
+                    <b>{o?.sector ?? p.category}</b>
+                    {o?.area && <span>{o.area}</span>}
+                    {o?.scale && <span>{o.scale}</span>}
+                    <span className="fine">{p.clientLabel}</span>
+                  </td>
+                  <td className="wProfile">{o?.profile ?? p.description}</td>
+                  <td className="wMade">
+                    {p.outputs.map((x) => (
+                      <span key={x.label}>{x.label}</span>
+                    ))}
+                  </td>
+                  <td className="wFig">
+                    {figures.length > 0 ? (
+                      figures.map((f) => (
+                        <div key={f.label} className="wFigRow">
+                          <b>{f.value}</b>
+                          <span>{f.label}</span>
+                          {(f.period || f.basis) && (
+                            <i>{[f.period, f.basis].filter(Boolean).join(" / ")}</i>
+                          )}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="wFigRow wFigSoft">
+                        {changes.map((r) => (
+                          <span key={r.label}>{r.description ?? r.label}</span>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="worksNote">
+        守秘のため企業名・店舗名・ロゴは掲載していません。業種・課題・取り組み・成果として記録しています。
+        {mode === "shelf" && "　行をクリックすると、その本が開きます。"}
+      </p>
+    </aside>
+  );
+}
 
 function CaseStudy({
   project,

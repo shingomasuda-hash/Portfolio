@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { hash } from "./math";
 import type { PortfolioProject } from "../data/portfolioProjects";
+import { headlineFigure } from "../data/outcomes";
 
 const SANS = `"Archivo","Zen Kaku Gothic New","Helvetica Neue",Arial,sans-serif`;
 const MINCHO = `"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho",serif`;
@@ -54,11 +55,27 @@ export function pageTexture(
   ctx.textBaseline = "alphabetic";
 
   if (side === "left") {
-    /* the scene number, printed large and quiet */
-    ctx.fillStyle = `${ink}0.075)`;
-    ctx.font = `600 300px ${MINCHO}`;
+    /* On the result spread the paper carries the number itself; elsewhere,
+       the scene number, printed large and quiet. */
+    const fig = scene === 4 ? headlineFigure(project.id) : undefined;
     ctx.textAlign = "left";
-    ctx.fillText(String(scene + 1).padStart(2, "0"), M + 6, H - 96);
+    if (fig) {
+      const avail = W - M * 2 - 120;
+      let size = 240;
+      ctx.font = `600 ${size}px ${MINCHO}`;
+      const w = ctx.measureText(fig.value).width;
+      if (w > avail) size = Math.max(72, Math.floor(size * (avail / w)));
+      ctx.fillStyle = `${ink}0.1)`;
+      ctx.font = `600 ${size}px ${MINCHO}`;
+      ctx.fillText(fig.value, M + 6, H - 132);
+      ctx.fillStyle = `${ink}0.3)`;
+      ctx.font = `600 22px ${SANS}`;
+      ctx.fillText(spaced(fig.label), M + 10, H - 96);
+    } else {
+      ctx.fillStyle = `${ink}0.075)`;
+      ctx.font = `600 300px ${MINCHO}`;
+      ctx.fillText(String(scene + 1).padStart(2, "0"), M + 6, H - 96);
+    }
 
     ctx.fillStyle = `${ink}0.5)`;
     ctx.font = `600 20px ${SANS}`;

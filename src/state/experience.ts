@@ -77,6 +77,7 @@ export type ExperienceState = {
   hovered: number | null;
   caseOpen: boolean;
   infoOpen: boolean;
+  worksOpen: boolean;
   intro: boolean;
   hint: boolean;
   openBook: (i: number) => void;
@@ -87,6 +88,7 @@ export type ExperienceState = {
   setHovered: (i: number | null) => void;
   setCaseOpen: (v: boolean) => void;
   setInfoOpen: (v: boolean) => void;
+  setWorksOpen: (v: boolean) => void;
   dismissIntro: () => void;
   _setPhase: (p: Phase) => void;
   _setScene: (n: number) => void;
@@ -101,6 +103,7 @@ export const useExperience = create<ExperienceState>((set, get) => ({
   hovered: null,
   caseOpen: false,
   infoOpen: false,
+  worksOpen: false,
   intro: true,
   hint: true,
 
@@ -148,6 +151,7 @@ export const useExperience = create<ExperienceState>((set, get) => ({
   setHovered: (i) => set({ hovered: i }),
   setCaseOpen: (v) => set({ caseOpen: v }),
   setInfoOpen: (v) => set({ infoOpen: v }),
+  setWorksOpen: (v) => set({ worksOpen: v }),
   dismissIntro: () => set({ intro: false }),
 
   _setPhase: (p) => set({ phase: p }),
